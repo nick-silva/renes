@@ -1,0 +1,11 @@
+.env
+roms/
+tools/
+*.mss
+__pycache__/
+.venv/
+work/
+out/
+refs/
+tests/example_rom.json
+.pytest_cache/

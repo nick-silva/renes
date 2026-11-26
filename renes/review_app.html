@@ -1,0 +1,1025 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>renes dashboard</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<style>
+:root {
+  --bg: #f6f5f1; --panel: #ffffff; --ink: #1d1d1b; --muted: #6b6a64; --line: #e3e1da;
+  --accent: #b5361f; --accent-ink: #ffffff; --ok: #2f7d4f; --warn: #b26b00; --bad: #b5361f;
+  --code-bg: #fbfaf7; --hit: #fff4d6; --unrun: #a5a39b; --chip: #efede6; --track: #e9e7e0;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #161614; --panel: #1f1f1c; --ink: #ecebe6; --muted: #9c9a92; --line: #33322e;
+    --accent: #e0664c; --accent-ink: #1a0f0c; --ok: #5bbf85; --warn: #e3a44a; --bad: #e0664c;
+    --code-bg: #1a1a18; --hit: #3a3120; --unrun: #6b6a64; --chip: #2a2a26; --track: #2c2c28;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+header { display: flex; align-items: center; gap: 14px; padding: 8px 16px; border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: 0; z-index: 3; flex-wrap: wrap; }
+header h1 { font-size: 15px; margin: 0; letter-spacing: .02em; }
+nav { display: flex; gap: 2px; }
+nav a { text-decoration: none; color: var(--muted); padding: 6px 11px; border-radius: 6px; font-weight: 500; }
+nav a.on { color: var(--ink); background: var(--chip); }
+nav a .badge[hidden] { display: none; }
+nav a .badge { display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 4px; border-radius: 9px; background: var(--accent); color: var(--accent-ink); font-size: 11px; text-align: center; }
+.spacer { flex: 1; }
+.live { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
+.dot.off { background: var(--bad); }
+button { font: inherit; border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 6px; padding: 5px 11px; cursor: pointer; }
+button:hover { border-color: var(--muted); }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+button.small { padding: 2px 8px; font-size: 12px; }
+.tab { display: none; }
+.tab.on { display: block; }
+.page { max-width: 1200px; margin: 0 auto; padding: 18px 20px 60px; }
+h2 { margin: 0 0 4px; font: 600 20px/1.2 ui-monospace, Consolas, monospace; overflow-wrap: anywhere; }
+h3.sec { margin: 22px 0 10px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.sub, .legend { color: var(--muted); font-size: 12px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; margin-bottom: 16px; }
+.card h3 { margin: 0 0 10px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.chip { font-size: 11px; padding: 0 7px; border-radius: 9px; background: var(--chip); color: var(--muted); white-space: nowrap; }
+.chip.candidate, .chip.waiting, .chip.proposed, .chip.running { color: var(--warn); }
+.chip.verified, .chip.approved, .chip.done, .chip.accepted, .chip.finished { color: var(--ok); }
+.chip.rework, .chip.flag, .chip.rejected, .chip.stalled, .chip.failed { color: var(--bad); }
+.chip.active { color: var(--accent); }
+/* overview */
+.next { display: flex; gap: 14px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 10px; padding: 12px 16px; margin-bottom: 18px; }
+.next b { font-size: 16px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+.tile { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+.tile .v { font-size: 24px; font-weight: 650; letter-spacing: -.01em; }
+.tile .l { font-size: 12px; color: var(--muted); }
+.bar { height: 6px; background: var(--track); border-radius: 3px; overflow: hidden; margin-top: 8px; }
+.bar > span { display: block; height: 100%; background: var(--accent); }
+.bar > span.ok { background: var(--ok); }
+.stages { display: grid; gap: 8px; }
+.stage { display: grid; grid-template-columns: 26px 140px 90px 1fr; gap: 10px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }
+.stage .n { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; background: var(--chip); color: var(--muted); }
+.stage.done .n { background: var(--ok); color: var(--panel); }
+.stage.active .n, .stage.waiting .n { background: var(--accent); color: var(--accent-ink); }
+.stage .d { color: var(--muted); font-size: 13px; }
+.charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px; }
+svg text { fill: var(--muted); font-size: 10px; }
+.warnt { color: var(--warn); font-weight: 500; }
+main a, .page a { color: var(--accent); }
+.card:has(> table.plain) { overflow-x: auto; }
+table.plain { border-collapse: collapse; width: 100%; font-size: 13px; }
+table.plain th { text-align: left; color: var(--muted); font-weight: 500; font-size: 12px; padding: 4px 8px; border-bottom: 1px solid var(--line); }
+table.plain td { padding: 5px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+/* research */
+.fact { display: grid; grid-template-columns: 1fr auto; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+.fact .t { font-size: 14px; }
+.fact .s { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.fact .btns { display: flex; gap: 6px; align-items: start; flex-wrap: wrap; justify-content: end; }
+.fact textarea, .addform textarea, .addform input, .addform select { font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); width: 100%; }
+.addform { display: grid; grid-template-columns: 160px 1fr; gap: 8px; }
+.addform textarea { min-height: 60px; grid-column: 1 / -1; }
+.mode { border-left: 4px solid var(--warn); }
+/* review */
+.review { display: grid; grid-template-columns: 340px 1fr; height: calc(100vh - 51px); }
+aside { border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; background: var(--panel); }
+.filters { padding: 10px; display: flex; flex-wrap: wrap; gap: 6px; border-bottom: 1px solid var(--line); }
+.filters button { padding: 3px 9px; font-size: 12px; }
+.filters button.on { background: var(--ink); color: var(--panel); border-color: var(--ink); }
+.filters input { flex: 1 0 100%; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); font: inherit; }
+#list { overflow: auto; flex: 1; }
+.item { padding: 8px 12px; border-bottom: 1px solid var(--line); cursor: pointer; }
+.item:hover { background: var(--bg); }
+.item.sel { background: var(--hit); }
+.item .nm { font-family: ui-monospace, Consolas, monospace; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.item .meta { font-size: 12px; color: var(--muted); display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+#detail { overflow: auto; padding: 18px 22px 60px; min-width: 0; }
+.empty { color: var(--muted); margin-top: 20vh; text-align: center; }
+.summary { font-size: 15px; max-width: 80ch; margin: 10px 0 18px; }
+.shots { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.shots figure { margin: 0; }
+.shots figcaption { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+.strip { display: flex; gap: 4px; overflow-x: auto; }
+.strip img { width: 256px; max-width: 100%; image-rendering: pixelated; border-radius: 4px; border: 1px solid var(--line); }
+.strip.compact img { width: 160px; }
+.effects { font-family: ui-monospace, Consolas, monospace; font-size: 13px; }
+.effects td { padding: 2px 12px 2px 0; }
+.pass { color: var(--ok); } .fail { color: var(--bad); }
+.code { font: 13px/1.5 ui-monospace, Consolas, monospace; background: var(--code-bg); border-radius: 8px; overflow-x: auto; }
+.code table { border-collapse: collapse; width: 100%; }
+.code td { padding: 1px 10px; white-space: pre; vertical-align: top; }
+.code tr.hit td.ins { background: var(--hit); }
+.code tr.unrun td { color: var(--unrun); }
+.code tr.lbl td { color: var(--accent); font-weight: 600; padding-top: 6px; }
+.code td.regs { color: var(--muted); font-size: 12px; }
+.code td.cmt { color: var(--ok); white-space: normal; min-width: 18ch; }
+.chg { color: var(--accent); font-weight: 600; }
+.actions { display: grid; gap: 10px; }
+.actions .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.actions input, .actions textarea { font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); flex: 1; min-width: 200px; }
+.actions textarea { min-height: 54px; }
+.kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; font-size: 13px; }
+.kv div:nth-child(odd) { color: var(--muted); }
+/* projects */
+#proj { font: inherit; font-weight: 600; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--ink); max-width: 46vw; }
+.projects { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+.proj { cursor: pointer; }
+.proj.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.proj h3 { text-transform: none; letter-spacing: 0; font-size: 15px; color: var(--ink); margin: 0 0 2px; }
+.proj .rows { display: grid; gap: 8px; margin-top: 10px; }
+.proj .row .l { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; }
+.code a.sym { color: inherit; text-decoration: underline dotted; text-underline-offset: 3px; }
+.code a.sym:hover { color: var(--accent); }
+h2 a.small { font-size: 13px; font-weight: 500; margin-left: 10px; color: var(--accent); }
+/* questions */
+.qgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 14px; }
+.q.empty { opacity: .6; }
+.qhead { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.qhead h3 { margin: 0; }
+.qitems { margin: 8px 0 0; padding-left: 18px; max-height: 260px; overflow: auto; font-size: 13px; }
+.qitems li { margin: 3px 0; }
+/* map */
+.maphead { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: space-between; }
+.maphead h3 { margin: 0; }
+.layers { display: flex; gap: 6px; flex-wrap: wrap; }
+.layers button { padding: 3px 9px; font-size: 12px; }
+.layers button.on { background: var(--ink); color: var(--panel); border-color: var(--ink); }
+.mapwrap { display: flex; gap: 6px; margin-top: 10px; }
+.pages { display: flex; flex-direction: column; font: 11px ui-monospace, Consolas, monospace; color: var(--muted); text-align: right; min-width: 44px; }
+.mapwrap canvas { width: 100%; max-width: 900px; image-rendering: pixelated; border-radius: 4px; cursor: crosshair; background: var(--track); }
+.maplegend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+.maplegend i { display: inline-block; width: 11px; height: 11px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+.readout { margin-top: 8px; font: 13px ui-monospace, Consolas, monospace; min-height: 1.5em; }
+.subsys { display: grid; grid-template-columns: minmax(240px, 320px) 1fr; gap: 14px; margin-top: 10px; }
+#clusters { max-height: 560px; overflow: auto; }
+#clusters .cl { padding: 6px 8px; border-radius: 6px; cursor: pointer; }
+#clusters .cl:hover { background: var(--bg); }
+#clusters .sw { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
+#clusters .cl .l { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+#graph svg { width: 100%; height: 560px; background: var(--code-bg); border-radius: 8px; }
+#graph circle { cursor: pointer; }
+#graph circle.dim { opacity: .15; }
+#graph line { stroke: var(--line); }
+@media (max-width: 800px) { .subsys { grid-template-columns: 1fr; } }
+/* code */
+.codemain { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.codebar { display: flex; gap: 8px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--panel); flex-wrap: wrap; }
+.codebar input[type=text], .codebar #cq { flex: 1 1 260px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); font: inherit; }
+.codeinfo { padding: 6px 12px; border-bottom: 1px solid var(--line); }
+.asm { flex: 1; overflow: auto; font: 13px/1.45 ui-monospace, Consolas, monospace; background: var(--code-bg); padding: 8px 0 40vh; }
+.asm .ln { white-space: pre; padding: 0 14px 0 0; }
+.asm.wrap .ln { white-space: pre-wrap; }
+.asm .ln::before { content: attr(data-n); color: var(--unrun); display: inline-block; width: 6ch; text-align: right; margin-right: 14px; user-select: none; }
+.asm .ln.cur { background: var(--hit); }
+.asm .ln.flash { animation: flash 1.2s ease-out; }
+@keyframes flash { from { background: var(--hit); } to { background: transparent; } }
+.asm .cm { color: var(--ok); }
+.asm .cm.unrev { color: var(--warn); }
+.asm .sep { color: var(--unrun); }
+.asm .doc { color: var(--muted); font-style: italic; }
+.asm .mn { color: var(--accent); }
+.asm .dir { color: var(--muted); }
+.asm .num { color: var(--ink); opacity: .75; }
+.asm a.def { font-weight: 650; color: var(--ink); text-decoration: none; }
+.asm a.ref { color: inherit; text-decoration: underline dotted; text-underline-offset: 3px; }
+.asm a.ref:hover, .asm a.def:hover { color: var(--accent); }
+.asm .st { font: 11px/1 system-ui, sans-serif; margin-left: 10px; padding: 2px 6px; border-radius: 9px; background: var(--chip); color: var(--muted); white-space: nowrap; vertical-align: 1px; }
+.asm .st.verified { color: var(--ok); } .asm .st.approved { color: var(--ok); font-weight: 600; }
+.asm .st a { color: inherit; }
+.asm mark { background: #ffe58a; color: #1d1d1b; border-radius: 2px; }
+#outline { overflow: auto; flex: 1; }
+#outline .item { padding: 5px 12px; }
+#outline .item .meta { margin-top: 0; }
+#toast { position: fixed; right: 16px; bottom: 16px; background: var(--ink); color: var(--panel); padding: 9px 14px; border-radius: 8px; opacity: 0; transition: opacity .2s; max-width: 60ch; pointer-events: none; }
+#toast.show { opacity: .95; }
+@media (max-width: 800px) {
+  .review { grid-template-columns: 1fr; height: auto; }
+  aside { max-height: 45vh; border-right: none; border-bottom: 1px solid var(--line); }
+  #detail { padding: 14px 16px 60px; }
+  .stage { grid-template-columns: 26px 1fr; }
+  .stage .d, .stage .chip { grid-column: 2; }
+  .page { padding: 14px 16px 60px; }
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>renes</h1>
+  <select id="proj" title="Project (ROM)"></select>
+  <nav>
+    <a href="#projects" data-tab="projects">Projects</a>
+    <a href="#overview" data-tab="overview">Overview</a>
+    <a href="#research" data-tab="research">Research<span class="badge" id="rbadge" hidden></span></a>
+    <a href="#review" data-tab="review">Review</a>
+    <a href="#questions" data-tab="questions">Questions<span class="badge" id="qbadge" hidden></span></a>
+    <a href="#map" data-tab="map">Map</a>
+    <a href="#code" data-tab="code">Code</a>
+    <a href="#activity" data-tab="activity">Activity<span class="badge" id="abadge" hidden></span></a>
+  </nav>
+  <span class="spacer"></span>
+  <span class="live"><span class="dot" id="dot"></span><span id="live">connecting…</span></span>
+  <button id="build" title="Render the .asm from the knowledge base, reassemble and byte-compare">Rebuild &amp; verify</button>
+</header>
+
+<section class="tab" id="tab-projects"><div class="page" id="projects"></div></section>
+<section class="tab" id="tab-overview"><div class="page" id="overview"></div></section>
+<section class="tab" id="tab-research"><div class="page" id="research"></div></section>
+<section class="tab" id="tab-questions"><div class="page" id="questions"></div></section>
+<section class="tab" id="tab-review">
+  <div class="review">
+    <aside>
+      <div class="filters">
+        <button data-f="review" class="on">Needs review</button>
+        <button data-f="routine">Routines</button>
+        <button data-f="ram">RAM</button>
+        <button data-f="done">Approved</button>
+        <button data-f="all">All</button>
+        <input id="q" placeholder="Filter by name or $address">
+      </div>
+      <div id="list"></div>
+    </aside>
+    <section id="detail"><div class="empty">Pick an item on the left.</div></section>
+  </div>
+</section>
+<section class="tab" id="tab-map"><div class="page" id="map">
+  <div class="card">
+    <div class="maphead"><h3>ROM map</h3>
+      <div class="layers" id="romlayers">
+        <button data-layer="state" class="on">What it is</button><button data-layer="exec">How often it ran</button>
+        <button data-layer="read">Data reads</button><button data-layer="conf">Confidence</button><button data-layer="evidence">Evidence</button></div></div>
+    <div class="legend" id="romintro"></div>
+    <div class="mapwrap"><div class="pages" id="rompages"></div><canvas id="romcanvas"></canvas></div>
+    <div class="maplegend" id="romlegend"></div>
+    <div class="readout" id="romreadout">Hover the map: every cell is one byte of the program ROM. Click a routine to open it in the Code tab.</div>
+  </div>
+  <div class="card">
+    <div class="maphead"><h3>RAM map</h3>
+      <div class="layers" id="ramlayers"><button data-layer="state" class="on">What we know</button><button data-layer="heat">How busy it is</button></div></div>
+    <div class="legend">2 KB of work RAM, 64 bytes per row. Outlined blocks are labeled variables and arrays.</div>
+    <div class="mapwrap"><div class="pages" id="rampages"></div><canvas id="ramcanvas"></canvas></div>
+    <div class="maplegend" id="ramlegend"></div>
+    <div class="readout" id="ramreadout">Hover a byte.</div>
+  </div>
+  <div class="card">
+    <h3>Subsystems</h3>
+    <div class="legend">Routines grouped by who calls whom; each group is named by the words its annotated routines share. Routines called from many places form "shared helpers" (grey). Filled = annotated, hollow = not yet.</div>
+    <div class="subsys"><div id="clusters"></div><div id="graph"></div></div>
+  </div>
+</div></section>
+<section class="tab" id="tab-code">
+  <div class="review">
+    <aside>
+      <div class="filters">
+        <button data-o="routine" class="on">Routines</button>
+        <button data-o="data">Data</button>
+        <button data-o="ram">RAM</button>
+        <input id="oq" placeholder="Filter the outline">
+      </div>
+      <div id="outline"></div>
+    </aside>
+    <section class="codemain">
+      <div class="codebar">
+        <input id="cq" placeholder="Search the code (Enter: next, Shift+Enter: previous)">
+        <span class="legend" id="cqn"></span>
+        <span class="spacer"></span>
+        <label class="legend"><input type="checkbox" id="cwrap"> wrap</label>
+        <button id="creload" title="Render again from the knowledge base">Reload</button>
+      </div>
+      <div class="legend codeinfo" id="codeinfo">Loading…</div>
+      <div id="asm" class="asm"></div>
+    </section>
+  </div>
+</section>
+<section class="tab" id="tab-activity"><div class="page" id="activity"></div></section>
+<div id="toast"></div>
+
+<script>
+const $ = (s, el = document) => el.querySelector(s);
+const hex = (n, w = 4) => "$" + n.toString(16).toUpperCase().padStart(w, "0");
+const h2 = n => n.toString(16).toUpperCase().padStart(2, "0");
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+const pct = (a, b) => b ? Math.round(100 * a / b) : 0;
+function secs(s) {
+  return s < 90 ? `${Math.round(s)} s` : s < 5400 ? `${Math.round(s / 60)} min` : `${(s / 3600).toFixed(1)} h`;
+}
+function ago(ts) {
+  if (!ts) return "";
+  const s = (Date.now() - new Date(ts).getTime()) / 1000;
+  if (s < 60) return Math.max(0, Math.round(s)) + "s ago";
+  if (s < 3600) return Math.round(s / 60) + " min ago";
+  if (s < 86400) return Math.round(s / 3600) + " h ago";
+  return Math.round(s / 86400) + " d ago";
+}
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); setTimeout(() => t.classList.remove("show"), 3500); }
+let project = null;
+try { project = new URLSearchParams(location.search).get("p") || localStorage.getItem("renes.project"); } catch (e) {}
+const withProject = url => project ? url + (url.includes("?") ? "&" : "?") + "p=" + encodeURIComponent(project) : url;
+async function get(url) { const r = await fetch(withProject(url)); if (!r.ok) throw new Error(r.status); return r.json(); }
+async function post(url, body) {
+  return (await fetch(withProject(url), {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body || {})})).json();
+}
+
+// ---- tabs and polling ---------------------------------------------------------------------
+let tab = "overview";
+function setTab(name) {
+  const [base, arg] = String(name).split("/");
+  tab = ["projects", "overview", "research", "review", "activity", "code", "map", "questions"].includes(base) ? base : "overview";
+  if (tab === "map") loadMaps();
+  if (tab === "questions") loadQuestions();
+  if (tab === "code") { (asm ? Promise.resolve() : loadCode(false)).then(() => arg && jumpTo(decodeURIComponent(arg))); }
+  document.querySelectorAll("nav a").forEach(a => a.classList.toggle("on", a.dataset.tab === tab));
+  document.querySelectorAll(".tab").forEach(s => s.classList.toggle("on", s.id === "tab-" + tab));
+  poll(true);
+}
+window.addEventListener("hashchange", () => setTab(location.hash.slice(1)));
+
+let lastOk = 0, polling = false;
+async function poll(force) {
+  if (polling && !force) return;
+  polling = true;
+  try {
+    const [ov, act] = await Promise.all([get("/api/overview"), get("/api/activity")]);
+    if (project && ov.project !== project) { polling = false; return; }   // answer for a project we just left
+    badges(ov, act);
+    if (tab === "overview") renderOverview(ov, act);
+    if (tab === "projects") renderProjects(await get("/api/projects"));
+    if (tab === "activity") renderActivity(act);
+    if (tab === "research" && (force || !editing())) renderResearch(await get("/api/research"));
+    if (tab === "review" && (force || !all.length)) await loadItems();
+    lastOk = Date.now(); $("#dot").classList.remove("off");
+  } catch (e) { $("#dot").classList.add("off"); }
+  polling = false;
+}
+setInterval(() => {
+  $("#live").textContent = lastOk ? "updated " + ago(new Date(lastOk).toISOString()) : "connecting…";
+}, 1000);
+setInterval(() => { if (!document.hidden) poll(false); }, 4000);
+function editing() { const a = document.activeElement; return a && (a.tagName === "TEXTAREA" || a.tagName === "INPUT" || a.tagName === "SELECT"); }
+
+function badges(ov, act) {
+  const pending = (ov.stages.find(s => s.name === "Research") || {}).state === "waiting";
+  const pend = $("#rbadge"); pend.hidden = !pending; pend.textContent = "!";
+  const running = act.tasks.filter(t => t.state === "running").length + act.commands.filter(c => c.running).length;
+  const b = $("#abadge"); b.hidden = !running; b.textContent = running;
+}
+
+// ---- overview ------------------------------------------------------------------------------
+const NEXT_HELP = {
+  research: "Run /renes-research (or let /loop /renes-cycle do it).",
+  review: "Your turn: see the Research or Review tab.",
+  annotate: "Run /renes-cycle or /renes-annotate.",
+  experiment: "Run /renes-cycle or /renes-experiment.",
+  benchmark: "Run /renes-cycle (or python -m renes benchmark).",
+  evidence: "Run /renes-cycle (or python -m renes evidence).",
+  explore: "Run /renes-cycle or /renes-explore.",
+};
+function tile(value, label, part, whole, ok) {
+  return `<div class="tile"><div class="v">${value}</div><div class="l">${label}</div>${
+    whole != null ? `<div class="bar"><span class="${ok ? "ok" : ""}" style="width:${pct(part, whole)}%"></span></div>` : ""}</div>`;
+}
+function lineChart(points, ykey, w = 520, h = 140, max = null) {
+  if (points.length < 2) return `<div class="legend">Not enough history yet.</div>`;
+  const xs = points.map(p => new Date(p.t).getTime()), ys = points.map(p => p[ykey]);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), y1 = max ?? Math.max(...ys, 1);
+  const X = x => 30 + (w - 40) * (x - x0) / Math.max(x1 - x0, 1), Y = y => h - 18 - (h - 30) * y / y1;
+  const d = points.map((p, i) => `${i ? "L" : "M"}${X(xs[i]).toFixed(1)},${Y(ys[i]).toFixed(1)}`).join(" ");
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" role="img">
+    <line x1="30" y1="${h - 18}" x2="${w - 10}" y2="${h - 18}" stroke="var(--line)"/>
+    <path d="${d}" fill="none" stroke="var(--accent)" stroke-width="2"/>
+    <text x="2" y="${Y(y1) + 4}">${y1}</text><text x="2" y="${h - 14}">0</text>
+    <text x="30" y="${h - 3}">${new Date(x0).toLocaleDateString()}</text>
+    <text x="${w - 10}" y="${h - 3}" text-anchor="end">${new Date(x1).toLocaleString()}</text></svg>`;
+}
+function renderOverview(o, act) {
+  const n = o.numbers, ram = n.ram_labels, rn = n.routine_notes;
+  const ramTotal = Object.values(ram).reduce((a, b) => a + b, 0);
+  const b = o.build;
+  const running = act.tasks.filter(t => t.state === "running");
+  let html = `<div class="next"><div><div class="sub">Next step for the loop</div><b>${esc(o.next.stage)}</b> · ${esc(o.next.reason)}
+      <div class="legend">${esc(NEXT_HELP[o.next.stage] || "")}</div></div></div>`;
+  if (running.length) html += `<div class="card"><h3>Running now</h3>${running.map(taskRow).join("")}</div>`;
+  html += `<div class="tiles">
+    ${tile(pct(n.executed, n.prg) + "%", `of the ROM proven by execution (${n.executed} bytes)`, n.executed, n.prg)}
+    ${tile(pct(n.code_bytes + n.data_bytes, n.prg) + "%", `classified as code or data`, n.code_bytes + n.data_bytes, n.prg)}
+    ${tile(`${n.annotated} / ${n.routines}`, `routines annotated (${n.ready} ready now)`, n.annotated, n.routines)}
+    ${tile(`${ram.verified || 0} / ${ramTotal}`, `RAM labels verified (${ram.approved || 0} approved)`, ram.verified || 0, ramTotal, true)}
+    ${tile(`${n.experiments_passed} / ${n.experiments}`, "experiments passed", n.experiments_passed, n.experiments, true)}
+    ${tile(`${n.evidence}`, "routines with screenshots + traces", n.evidence, n.annotated)}
+    ${tile(b ? (b.ok ? "✓ identical" : "✗ broken") : "–", b ? `last build ${ago(b.at)}` : "not built yet")}
+  </div>`;
+  html += `<h3 class="sec">Pipeline</h3><div class="stages">${o.stages.map((s, i) => `
+    <div class="stage ${s.state}"><span class="n">${s.state === "done" ? "✓" : i + 1}</span><b>${esc(s.name)}</b>
+      <span class="chip ${s.state}">${s.state}</span><span class="d">${esc(s.detail)}</span></div>`).join("")}</div>`;
+  html += `<h3 class="sec">History</h3><div class="charts">
+    <div class="card"><h3>Routines annotated</h3>${lineChart(o.annotated_curve, "n")}</div>
+    <div class="card"><h3>Benchmark (aggregate only)</h3>${o.benchmarks.length ? `<table class="plain"><tr><th>run</th><th>when</th><th>code/data split</th><th>names match</th><th>verified names</th></tr>${
+      o.benchmarks.slice(-8).reverse().map(x => `<tr><td>#${x.id}</td><td>${ago(x.created)}</td><td>${Math.round(100 * x.split)}%</td>
+        <td>${x.names != null ? Math.round(100 * x.names) + "%" : "–"}</td><td>${x.verified != null ? Math.round(100 * x.verified) + "%" : "–"}</td></tr>`).join("")}</table>`
+      : `<div class="legend">No benchmark yet.</div>`}</div></div>`;
+  html += `<div class="charts" style="margin-top:14px">
+    <div class="card"><h3>Loop rounds</h3>${o.rounds.length ? `<table class="plain"><tr><th>round</th><th>stage</th><th>started</th><th>took</th><th>progress</th></tr>${
+      o.rounds.map(r => `<tr><td>#${r.id}</td><td>${esc(r.stage)}</td><td>${ago(r.started)}</td><td>${r.seconds == null ? "running" : secs(r.seconds)}</td>
+        <td>${r.gains == null ? "–" : r.gains.length ? esc(r.gains.join(", ")) : `<span class="warnt">no progress</span>`}${r.note ? `<div class="legend">${esc(r.note)}</div>` : ""}</td></tr>`).join("")}</table>`
+      : `<div class="legend">No rounds recorded yet. /renes-cycle records one per pass.</div>`}</div>
+    <div class="card"><h3>Exploration runs</h3>${o.runs.length ? `<table class="plain"><tr><th>run</th><th>kind</th><th>started</th><th>took</th><th>frames</th><th>code run</th><th>new code</th></tr>${
+      o.runs.map(r => `<tr><td>#${r.id}</td><td>${esc(r.kind)}</td><td>${ago(r.started)}</td><td>${r.seconds == null ? "–" : secs(r.seconds)}</td>
+        <td>${(r.frames || 0).toLocaleString()}</td><td>${r.run_code ?? "–"}</td>
+        <td>${r.new_code == null ? "–" : r.new_code ? `<b>+${r.new_code}</b>` : `<span class="legend">0</span>`}</td></tr>`).join("")}</table>
+      <div class="legend">code run: bytes this run executed · new code: bytes no earlier run had reached</div>`
+      : `<div class="legend">No runs yet.</div>`}</div></div>`;
+  html += `<div class="legend" style="margin-top:12px">${esc(o.rom.name)} · mapper ${o.rom.mapper} · SHA-1 ${o.rom.sha1} · research mode: ${esc(o.research_mode)}</div>`;
+  $("#overview").innerHTML = html;
+}
+
+// ---- research ------------------------------------------------------------------------------
+function renderResearch(r) {
+  const pending = r.facts.filter(f => f.status === "proposed");
+  const byKind = {};
+  r.facts.forEach(f => (byKind[f.kind] = byKind[f.kind] || []).push(f));
+  let html = `<div class="card mode"><h3>Research mode: ${esc(r.mode)}</h3><div class="legend">${r.mode === "benchmark"
+    ? "This game is benchmarked: research uses only manuals, walkthroughs and gameplay pages. No RAM maps, disassemblies or cheat lists are shown to the annotator."
+    : "Open mode: any public source may be used (RAM maps, cheat codes), always cited."}</div></div>`;
+  html += `<div class="next"><div><div class="sub">Before the loop uses it</div>${pending.length
+    ? `<b>${pending.length} facts</b> are waiting for your review. Only accepted facts reach the annotator. Accept, edit or reject them, and add anything you know.`
+    : `<b>Reviewed.</b> ${r.facts.filter(f => f.status === "accepted").length} accepted facts feed the annotator.`}</div>
+    <span class="spacer"></span>${pending.length ? `<button class="primary" id="acceptall">Accept all ${pending.length} remaining</button>` : ""}</div>`;
+  html += `<div class="card"><h3>Add your own context</h3><div class="addform">
+      <select id="nkind">${r.kinds.map(k => `<option ${k === "context" ? "selected" : ""}>${k}</option>`).join("")}</select>
+      <input id="nsource" placeholder="Source (optional): URL, manual page, your experience">
+      <textarea id="ntext" placeholder="e.g. 'The second loop replaces the walking enemies with armoured ones' or 'Focus on the water levels first'"></textarea>
+      <div><button class="primary" id="addfact">Add to brief</button></div></div></div>`;
+  for (const [kind, facts] of Object.entries(byKind)) {
+    html += `<div class="card"><h3>${esc(kind)} (${facts.length})</h3>${facts.map(f => `
+      <div class="fact" data-id="${f.id}"><div><div class="t">${esc(f.text)}</div>
+        <div class="s"><span class="chip ${f.status}">${f.status}</span> ${f.author === "user" ? "· you" : "· research"} · ${
+          /^https?:/.test(f.source) ? `<a href="${esc(f.source)}" target="_blank" rel="noopener">${esc(f.source)}</a>` : esc(f.source)}</div></div>
+        <div class="btns">${f.status !== "accepted" ? `<button class="small" data-b="accept">Accept</button>` : ""}
+          <button class="small" data-b="edit">Edit</button>
+          ${f.status !== "rejected" ? `<button class="small" data-b="reject">Reject</button>` : ""}
+          ${f.author === "user" ? `<button class="small" data-b="delete">Delete</button>` : ""}</div></div>`).join("")}</div>`;
+  }
+  html += `<div class="card"><h3>Game Genie codes</h3>${r.codes.length
+    ? `<div class="code" style="padding:8px 10px">${r.codes.map(c => esc(c)).join("<br>")}</div>`
+    : `<div class="legend">No research codes.</div>`}${r.test_codes ? `<div class="legend" style="margin-top:6px">${r.test_codes} test codes are hidden (evaluation only).</div>` : ""}</div>`;
+  $("#research").innerHTML = html;
+  $("#acceptall")?.addEventListener("click", () => briefAct({action: "accept_all"}));
+  $("#addfact").onclick = () => briefAct({action: "add", kind: $("#nkind").value, text: $("#ntext").value, source: $("#nsource").value});
+  document.querySelectorAll(".fact button").forEach(btn => btn.onclick = () => {
+    const row = btn.closest(".fact"), id = +row.dataset.id, act = btn.dataset.b;
+    if (act === "edit") {
+      const t = row.querySelector(".t");
+      t.innerHTML = `<textarea rows="2">${esc(t.textContent)}</textarea><div style="margin-top:4px"><button class="small primary">Save &amp; accept</button></div>`;
+      t.querySelector("textarea").focus();
+      t.querySelector("button").onclick = () => briefAct({action: "edit", id, text: t.querySelector("textarea").value});
+      return;
+    }
+    if (act === "delete" && !confirm("Delete your note?")) return;
+    briefAct({action: act, id});
+  });
+}
+async function briefAct(body) {
+  const r = await post("/api/brief", body); toast(r.message);
+  if (r.ok) { document.activeElement?.blur(); poll(true); }
+}
+
+// ---- activity ------------------------------------------------------------------------------
+function taskRow(t) {
+  const share = t.total ? pct(t.done, t.total) : null;
+  return `<div style="margin-bottom:10px"><div style="display:flex;gap:8px;align-items:center"><b>${esc(t.task)}</b>
+    <span class="chip ${t.state}">${t.state}</span><span class="legend">${t.total ? `${t.done} / ${t.total}` : ""} · ${esc(t.note || "")} · updated ${ago(t.updated)}</span></div>
+    <div class="bar"><span class="${t.state === "finished" ? "ok" : ""}" style="width:${share ?? (t.state === "finished" ? 100 : 15)}%"></span></div></div>`;
+}
+function dur(a, b) { const s = ((b ? new Date(b) : new Date()) - new Date(a)) / 1000; return s < 60 ? Math.round(s) + "s" : Math.round(s / 60) + " min"; }
+function renderActivity(a) {
+  let html = `<div class="card"><h3>Long-running tasks</h3>${a.tasks.length ? a.tasks.map(taskRow).join("") : `<div class="legend">No task progress reported yet.</div>`}</div>`;
+  html += `<div class="card"><h3>Recent commands</h3>${a.commands.length ? `<table class="plain"><tr><th>command</th><th>arguments</th><th>started</th><th>took</th><th>result</th></tr>${
+    a.commands.map(c => `<tr><td><b>${esc(c.command)}</b>${c.agent ? `<div class="legend">${esc(c.agent)}</div>` : ""}</td><td class="legend">${esc(c.args)}</td><td>${ago(c.started)}</td><td>${dur(c.started, c.finished)}</td>
+      <td>${c.running ? `<span class="chip running">running</span>` : c.exit_code === 0 ? `<span class="chip done">ok</span>` : `<span class="chip failed">exit ${c.exit_code ?? "?"}</span>`} ${esc(c.summary || "")}</td></tr>`).join("")}</table>`
+    : `<div class="legend">No commands logged yet. Commands that change the project (apply, experiment, evidence, explore, tas, build...) appear here.</div>`}</div>`;
+  html += `<div class="card"><h3>Recent events</h3><table class="plain">${a.events.map(e => `<tr><td style="width:110px">${ago(e.t)}</td>
+    <td style="width:100px"><span class="chip">${esc(e.kind)}</span></td><td>${esc(e.text)}</td></tr>`).join("")}</table></div>`;
+  $("#activity").innerHTML = html;
+}
+
+// ---- review --------------------------------------------------------------------------------
+let all = [], filter = "review", current = null;
+async function loadItems() { const d = await get("/api/items"); all = d.items; renderList(); }
+function visible() {
+  const q = $("#q").value.trim().toLowerCase();
+  return all.filter(i => {
+    if (filter === "review" && (i.status === "approved" || (i.status === "verified" && !i.flags.length))) return false;
+    if (filter === "routine" && i.type !== "routine") return false;
+    if (filter === "ram" && i.type !== "ram") return false;
+    if (filter === "done" && i.status !== "approved") return false;
+    return !q || i.name.toLowerCase().includes(q) || hex(i.addr).toLowerCase().includes(q);
+  });
+}
+function renderList() {
+  $("#list").innerHTML = visible().map(i => `
+    <div class="item ${current === i.id ? "sel" : ""}" data-id="${i.id}">
+      <div class="nm">${esc(i.name)}</div>
+      <div class="meta"><span>${i.type === "ram" ? "RAM" : "routine"} ${hex(i.addr)}</span>
+        <span class="chip ${i.status}">${i.status}</span>
+        ${i.confidence != null ? `<span>${i.confidence.toFixed(2)}</span>` : ""}
+        ${i.evidence ? `<span class="chip">screens</span>` : ""}
+        ${i.flags.map(f => `<span class="chip flag">${esc(f)}</span>`).join("")}</div>
+    </div>`).join("") || `<div class="empty">Nothing here.</div>`;
+}
+function shots(media, roles) {
+  return roles.map(([role, title]) => {
+    const imgs = media.filter(m => m.role === role);
+    if (!imgs.length) return "";
+    return `<figure><figcaption>${title}</figcaption><div class="strip ${imgs.length > 2 ? "compact" : ""}">${
+      imgs.map(m => `<img loading="lazy" src="${withProject(`/media/${m.id}.png`)}" alt="${role} frame ${m.frame}" title="frame ${m.frame}">`).join("")}</div></figure>`;
+  }).join("");
+}
+function flags(p) { return (p & 0x80 ? "N" : "-") + (p & 0x40 ? "V" : "-") + (p & 0x02 ? "Z" : "-") + (p & 0x01 ? "C" : "-"); }
+function regCell(b, a) {
+  const part = (k, label) => {
+    const before = b[k], after = a ? a[k] : before;
+    return before !== after ? `<span class="chg">${label}=${h2(before)}→${h2(after)}</span>` : `${label}=${h2(before)}`;
+  };
+  return `${part("a", "A")} ${part("x", "X")} ${part("y", "Y")} ${flags(b.p)}`;
+}
+// Names this item's code shares with the full listing become links to their definition there.
+function linkNames(text, names) {
+  const known = new Set(names || []);
+  return esc(text).replace(/[A-Za-z_]\w+/g, w => known.has(w) ? `<a class="sym" href="#code/${encodeURIComponent(w)}">${w}</a>` : w);
+}
+function nameList(list, names) {
+  return list.length ? list.map(n => linkNames(n, names)).join(", ") : "—";
+}
+function codeView(d) {
+  const rows = d.lines.map((l, i) => {
+    if (l.addr == null) return `<tr class="lbl"><td colspan="4">${linkNames(l.text, d.symbols)}</td></tr>`;
+    const [ins, ...rest] = l.text.split(";");
+    const unrun = /\?/.test(ins.slice(0, 7));
+    let jump = "";
+    if (l.after) {
+      const next = d.lines.slice(i + 1).find(x => x.addr != null);
+      if (!next || l.after.pc !== next.addr) jump = ` <span class="chg">→ ${hex(l.after.pc)}</span>`;
+    }
+    return `<tr class="${l.visits ? "hit" : ""} ${unrun ? "unrun" : ""}"><td class="ins">${linkNames(ins.trimEnd(), d.symbols)}</td>
+      <td class="regs">${l.before ? regCell(l.before, l.after) + jump : ""}</td>
+      <td class="regs">${l.visits > 1 ? "×" + l.visits : ""}</td>
+      <td class="cmt">${linkNames(rest.join(";").trim(), d.symbols)}</td></tr>`;
+  }).join("");
+  return `<div class="legend" style="margin-bottom:8px">${d.trace
+      ? `Highlighted lines ran in the recorded call (frame ${d.trace.frame}, ${d.trace.instructions} instructions${d.trace.finished ? "" : ", left the routine by a jump"}). Registers are shown before each line; a change shows before→after; → marks a branch or jump taken.`
+      : "No recorded call yet. Run <code>python -m renes evidence</code> to record one."}
+    Grey lines never ran during exploration.</div><div class="code"><table>${rows}</table></div>`;
+}
+function actions(d) {
+  return `<div class="card"><h3>Your decision</h3><div class="actions">
+    <div class="row"><button class="primary" data-act="approve">Approve</button>
+      <span class="legend">Locks the name${d.type === "routine" ? " and summary" : ""}; the annotator can no longer change it.</span></div>
+    <div class="row"><input id="newname" value="${esc(d.name)}"><button data-act="rename">Rename (approved)</button></div>
+    <div class="row"><textarea id="hint" placeholder="${d.type === "routine" ? "Hint for the annotator; the routine goes back to the front of the queue" : "Hint about this variable; shown in work units that use it"}"></textarea>
+      <button data-act="hint">Send hint</button></div>
+    <div class="row"><button data-act="reject">${d.type === "ram" ? "Remove this label" : "Reject (send back)"}</button></div>
+    ${d.hints?.length ? `<div class="legend">Earlier hints: ${d.hints.map(esc).join(" · ")}</div>` : ""}
+  </div></div>`;
+}
+async function show(id) {
+  current = id; renderList();
+  const d = await get("/api/item?id=" + encodeURIComponent(id));
+  let html = `<h2>${esc(d.name)} <a class="small" href="#code/${encodeURIComponent(d.name)}" title="this ${d.type === "ram" ? "variable" : "routine"} in the annotated source as it stands now">open in full listing →</a></h2><div class="sub">${d.type === "ram" ? "RAM" : "routine"} ${hex(d.addr)}${d.last ? "–" + hex(d.last) : ""}
+     · <span class="chip ${d.status}">${d.status}</span>${d.confidence != null ? " · claimed confidence " + d.confidence.toFixed(2) : ""}${d.size > 1 ? " · " + d.size + " bytes" : ""}</div>`
+    + (d.checked ? `<div class="legend">Evidence ${d.checked.evidence.toFixed(2)} (${esc(d.checked.factors)}) · ranked at ${d.checked.effective.toFixed(2)}</div>` : "");
+  if (d.type === "routine") {
+    html += `<div class="summary">${esc(d.summary)}</div>`;
+    html += `<div class="card"><h3>Context</h3><div class="kv"><div>Called from</div><div>${nameList(d.callers, d.callers)}</div>
+      <div>Calls</div><div>${nameList(d.callees, d.callees)}</div><div>Ran during exploration</div><div>${d.executed ? "yes" : "no"}</div></div></div>`;
+    if (d.knockout) {
+      const k = d.knockout;
+      html += `<div class="card"><h3>What it does on screen: knock-out</h3>
+        <div class="legend">The same moment played twice from a savestate: normally, and with this routine patched to return immediately (${k.frames} frames). Screen ${k.screen_differs ? "<b>differs</b>" : "is <b>unchanged</b> (its effect may be sound, timing or later)"}.</div>
+        <div class="shots" style="margin-top:8px">${shots(k.media, [["normal", "Normal"], ["knocked", "Routine knocked out"]])}</div>
+        ${k.labeled.length ? `<table class="effects" style="margin-top:10px"><tr><td><b>Labeled RAM</b></td><td>normal</td><td>knocked out</td></tr>${
+          k.labeled.slice(0, 14).map(e => `<tr><td>${esc(e.name)}</td><td>${h2(e.normal)}</td><td>${h2(e.knocked)}</td></tr>`).join("")}</table>` : `<div class="legend">No labeled RAM differs.</div>`}
+        <div class="legend">${k.other_bytes} unlabeled RAM bytes differ.</div></div>`;
+    } else {
+      html += `<div class="card"><h3>What it does on screen</h3><div class="legend">${d.executed
+        ? "No knock-out recorded yet. Run <code>python -m renes evidence</code>."
+        : "This routine never ran during exploration, so there is nothing to show yet."}</div></div>`;
+    }
+    html += `<div class="card"><h3>Line by line</h3>${codeView(d)}</div>`;
+  } else {
+    html += `<div class="summary">${esc(d.comment || "No comment yet.")}</div>`;
+    html += `<div class="card"><h3>Used by</h3><div class="legend">${nameList(d.used_by, d.symbols)}</div></div>`;
+    if (!d.experiments.length) html += `<div class="card"><h3>Experiments</h3><div class="legend">None yet. The loop's experiment stage tests candidates like this one.</div></div>`;
+    for (const e of d.experiments) {
+      html += `<div class="card"><h3>Experiment #${e.id} · <span class="${e.passed ? "pass" : "fail"}">${e.passed ? "passed" : "failed"}</span>${e.diagnostic ? " · diagnostic" : ""}</h3>
+        <div style="margin-bottom:8px">${esc(e.name)}</div>
+        <table class="effects">${e.checks.map(c => `<tr><td class="${c.passed ? "pass" : "fail"}">${c.passed ? "✓" : "✗"}</td><td>${esc(c.check.check)} ${esc(c.check.watch || "")}</td><td>${esc(c.detail)}</td></tr>`).join("")}</table>
+        ${e.media.length ? `<div class="shots" style="margin-top:12px">${shots(e.media, [["control", "Control (untouched)"], ["treatment", "With the intervention"]])}</div>` : `<div class="legend" style="margin-top:8px">No screenshots.</div>`}</div>`;
+    }
+  }
+  html += actions(d);
+  $("#detail").innerHTML = html;
+  $("#detail").scrollTop = 0;
+  $("#detail").querySelectorAll("[data-act]").forEach(b => b.onclick = () => decide(d, b.dataset.act));
+}
+async function decide(d, action) {
+  const value = action === "rename" ? $("#newname").value : action === "hint" || action === "reject" ? ($("#hint")?.value || "") : "";
+  if (action === "reject" && !confirm(d.type === "ram" ? `Remove the label ${d.name}?` : `Send ${d.name} back for rework?`)) return;
+  const r = await post("/api/decision", {id: d.id, action, value});
+  toast(r.message);
+  if (r.ok) { await loadItems(); if (all.some(i => i.id === d.id)) show(d.id); else $("#detail").innerHTML = `<div class="empty">${esc(r.message)}</div>`; }
+}
+$("#list").onclick = e => { const it = e.target.closest(".item"); if (it) show(it.dataset.id); };
+document.querySelectorAll(".filters button").forEach(b => b.onclick = () => {
+  filter = b.dataset.f; document.querySelectorAll(".filters button").forEach(x => x.classList.toggle("on", x === b)); renderList(); });
+$("#q").oninput = renderList;
+setInterval(() => { if (tab === "review" && !document.hidden) loadItems(); }, 15000);   // list only; the open item is left alone
+
+$("#build").onclick = async () => { $("#build").disabled = true; toast("Rebuilding…");
+  const r = await post("/api/build"); toast(r.message); $("#build").disabled = false; poll(true); };
+// ---- code ----------------------------------------------------------------------------------
+// The annotated disassembly, rendered live from the knowledge base (what the next build writes).
+let asm = null, oFilter = "routine", matches = [], matchAt = -1, lastQuery = "";
+const OUTLINE_KINDS = {routine: ["routine", "vector"], data: ["data", "table"], ram: ["ram"]};
+async function loadCode(force) {
+  try {
+    const d = await get("/api/asm" + (asm && !force ? "?v=" + asm.version : ""));
+    if (!d.unchanged) {
+      const keep = asm ? $("#asm").scrollTop : 0;
+      asm = {version: d.version, lines: d.text.split("\n"), labels: d.labels, file: d.file, defs: {}};
+      asm.lines.forEach((l, i) => { const m = /^([A-Za-z_]\w*)(:|\s+=)/.exec(l); if (m) asm.defs[m[1]] = i; });
+      renderAsm(); renderOutline(); matches = []; lastQuery = "";
+      $("#asm").scrollTop = keep;
+    }
+    const b = d.build;
+    $("#codeinfo").innerHTML = `Rendered live from the knowledge base: ${asm.lines.length.toLocaleString()} lines (version ${asm.version}). ` +
+      (b ? `Last build ${ago(b.at)}: ${b.ok ? "byte-identical" : "<b>broken</b>"}, written to <code>${esc(asm.file)}</code>. ` : "Not built yet. ") +
+      `Comments marked <span class="cm unrev">;?</span> are unreviewed proposals. Click a name to jump to its definition.`;
+  } catch (e) { $("#codeinfo").textContent = "Could not load the code: " + e.message; }
+}
+function tip(name, l) {
+  return `${name} · ${hex(l[0])} · ${l[1]} · ${l[2]}${l[3] != null ? " · confidence " + l[3].toFixed(2) : ""}`;
+}
+function operands(s) {
+  return s.replace(/([A-Za-z_]\w*)|(#?\$[0-9A-Fa-f]+|#?%[01]+|#?\d+)|([^A-Za-z_$#%\d]+|.)/g, (m, id, num, other) => {
+    if (id) {
+      const l = asm.labels[id];
+      return l && asm.defs[id] != null
+        ? `<a class="ref" href="#code/${encodeURIComponent(id)}" title="${esc(tip(id, l))}">${esc(id)}</a>`
+        : l ? `<span title="${esc(tip(id, l))}">${esc(id)}</span>` : esc(id);
+    }
+    return num ? `<span class="num">${esc(num)}</span>` : esc(other);
+  });
+}
+function statusChip(name) {
+  const l = asm.labels[name];
+  if (!l || l[2] === "builtin") return "";
+  return `<span class="st ${l[2]}">${hex(l[0])} · ${l[2]}${l[3] != null ? " " + l[3].toFixed(2) : ""}${
+    l[4] ? ` · <a href="#review" data-review="${l[4]}">review</a>` : ""}</span>`;
+}
+function hl(line) {
+  if (/^;-{10,}/.test(line)) return `<span class="sep">${esc(line)}</span>`;
+  if (line.startsWith(";")) return `<span class="doc">${esc(line)}</span>`;
+  const semi = line.indexOf(";");
+  const code = semi < 0 ? line : line.slice(0, semi), cmt = semi < 0 ? "" : line.slice(semi);
+  let out = "", chip = "";
+  const def = /^([A-Za-z_]\w*)(:?)(.*)$/.exec(code);
+  if (def) {
+    out = `<a class="def" id="d-${esc(def[1])}" href="#code/${encodeURIComponent(def[1])}" title="${asm.labels[def[1]] ? esc(tip(def[1], asm.labels[def[1]])) : ""}">${esc(def[1])}</a>${def[2]}${operands(def[3])}`;
+    chip = statusChip(def[1]);
+  } else {
+    const ins = /^(\s+)(\.?[A-Za-z]+)(.*)$/.exec(code);
+    out = ins ? `${ins[1]}<span class="${ins[2].startsWith(".") ? "dir" : "mn"}">${esc(ins[2])}</span>${operands(ins[3])}` : esc(code);
+  }
+  if (cmt) out += `<span class="cm${cmt.startsWith(";?") ? " unrev" : ""}">${esc(cmt)}</span>`;
+  return out + chip;
+}
+function renderAsm() {
+  const html = new Array(asm.lines.length);
+  for (let i = 0; i < asm.lines.length; i++) html[i] = `<div class="ln" id="ln${i}" data-n="${i + 1}">${hl(asm.lines[i]) || " "}</div>`;
+  $("#asm").innerHTML = html.join("");
+}
+function renderOutline() {
+  if (!asm) return;
+  const q = $("#oq").value.trim().toLowerCase(), kinds = OUTLINE_KINDS[oFilter];
+  const rows = Object.entries(asm.defs).filter(([n]) => {
+    const l = asm.labels[n];
+    return l && kinds.includes(l[1]) && (!q || n.toLowerCase().includes(q) || hex(l[0]).toLowerCase().includes(q));
+  }).sort((a, b) => a[1] - b[1]);
+  $("#outline").innerHTML = rows.map(([n]) => {
+    const l = asm.labels[n];
+    return `<div class="item" data-go="${esc(n)}"><div class="nm">${esc(n)}</div><div class="meta"><span>${hex(l[0])}</span>
+      <span class="chip ${l[2]}">${l[2]}</span>${l[3] != null ? `<span>${l[3].toFixed(2)}</span>` : ""}</div></div>`;
+  }).join("") || `<div class="empty">Nothing here.</div>`;
+}
+function showLine(i, flash) {
+  const el = $("#ln" + i);
+  if (!el) return;
+  document.querySelectorAll("#asm .ln.cur").forEach(x => x.classList.remove("cur"));
+  el.classList.add("cur");
+  el.scrollIntoView({block: "center"});
+  if (flash) { el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash"); }
+}
+function jumpTo(name) {
+  if (!asm) return;
+  if (name.startsWith("$")) {            // an address: the routine or table containing it, or a search
+    const a = parseInt(name.slice(1), 16);
+    let best = null;
+    for (const [n, l] of Object.entries(asm.labels))
+      if (a >= 0x8000 && l[0] <= a && l[1] !== "ram" && asm.defs[n] != null && (!best || l[0] > asm.labels[best][0])) best = n;
+    if (best) { showLine(asm.defs[best], true); return; }
+    $("#cq").value = name; lastQuery = null; searchCode(); return;
+  }
+  const i = asm.defs[name];
+  if (i == null) { toast(`${name} is not defined in the listing`); return; }
+  showLine(i, true);
+}
+function searchCode(back) {
+  const q = $("#cq").value.trim().toLowerCase();
+  if (!asm || !q) { $("#cqn").textContent = ""; return; }
+  if (q !== lastQuery) {
+    lastQuery = q; matchAt = -1;
+    matches = asm.lines.reduce((acc, l, i) => (l.toLowerCase().includes(q) && acc.push(i), acc), []);
+  }
+  if (!matches.length) { $("#cqn").textContent = "no matches"; return; }
+  matchAt = (matchAt + (back ? -1 : 1) + matches.length) % matches.length;
+  $("#cqn").textContent = `${matchAt + 1} / ${matches.length}`;
+  showLine(matches[matchAt], false);
+}
+$("#cq").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); searchCode(e.shiftKey); } });
+$("#cq").addEventListener("input", () => { lastQuery = ""; $("#cqn").textContent = ""; });
+$("#oq").addEventListener("input", renderOutline);
+$("#cwrap").addEventListener("change", e => $("#asm").classList.toggle("wrap", e.target.checked));
+$("#creload").addEventListener("click", () => loadCode(true));
+document.querySelectorAll("[data-o]").forEach(b => b.addEventListener("click", () => {
+  oFilter = b.dataset.o;
+  document.querySelectorAll("[data-o]").forEach(x => x.classList.toggle("on", x === b));
+  renderOutline();
+}));
+$("#outline").addEventListener("click", e => {
+  const it = e.target.closest("[data-go]");
+  if (it) location.hash = "code/" + encodeURIComponent(it.dataset.go);
+});
+$("#asm").addEventListener("click", async e => {
+  const r = e.target.closest("[data-review]");
+  if (!r) return;
+  e.preventDefault();
+  location.hash = "review";
+  await loadItems();
+  show(r.dataset.review);
+});
+setInterval(() => { if (tab === "code" && !document.hidden) loadCode(false); }, 15000);   // only re-sent when the KB changed
+
+// ---- open questions ----------------------------------------------------------------------
+let questionsFor = null;
+async function loadQuestions() {
+  const d = await get("/api/questions");
+  questionsFor = project;
+  const total = d.groups.reduce((n, g) => n + g.count, 0);
+  $("#questions").innerHTML = `
+    <div class="legend" style="margin-bottom:12px">What is still unexplained in ${esc(d.project)}: ${total.toLocaleString()} open items.
+      Each group says what resolves it; click an item to open it.</div>
+    <div class="qgrid">${d.groups.map(g => `
+      <div class="card q ${g.count ? "" : "empty"}">
+        <div class="qhead"><h3>${esc(g.title)}</h3><span class="chip ${g.who === "you" ? "active" : ""}">${g.count.toLocaleString()}</span></div>
+        <div class="legend">${esc(g.why)}</div>
+        <div class="legend"><b>Resolved by:</b> ${esc(g.resolve)}</div>
+        ${g.items.length ? `<ul class="qitems">${g.items.map(i => `<li><a href="#${i.link.tab}${i.link.target ? "/" + encodeURIComponent(i.link.target) : ""}">${esc(i.text)}</a> <span class="legend">${esc(i.detail)}</span></li>`).join("")}</ul>` : `<div class="legend">Nothing open.</div>`}
+        ${g.count > g.items.length ? `<div class="legend">… and ${(g.count - g.items.length).toLocaleString()} more</div>` : ""}
+      </div>`).join("")}</div>`;
+  const badge = $("#qbadge"); badge.hidden = !total; badge.textContent = total > 999 ? "999+" : total;
+}
+
+// ---- maps ----------------------------------------------------------------------------------
+// ROM and RAM byte maps (canvas, one cell per byte) and the subsystem graph (d3 force layout).
+const ROM_COLORS = ["#d9d6cc", "#7b9acc", "#c9b8a0", "#e0a458", "#8fcf9f", "#cfe3a8", "#2f7d4f", "#7b5ea7"];
+const RAM_COLORS = ["#d9d6cc", "#e0a458", "#cfe3a8", "#2f7d4f", "#7b5ea7", "#9a978e"];
+const GROUP_COLORS = ["#b5361f", "#2f7d4f", "#3f6fb5", "#b26b00", "#7b5ea7", "#1f8a8a", "#c2477a", "#6b8e23", "#8b5a2b", "#4b4bb0", "#d08a2e", "#507060"];
+let rom = null, ram = null, graphData = null, romLayer = "state", ramLayer = "state", mapsFor = null;
+const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+function heatColor(v, hue) {
+  if (!v) return "#d9d6cc";
+  const t = v / 255;
+  return hue === "blue" ? `hsl(215, 70%, ${88 - t * 55}%)` : `hsl(${40 - t * 35}, 90%, ${85 - t * 45}%)`;
+}
+function confColor(c) { return c == null ? "#c9c6bc" : `hsl(${Math.round(c * 120)}, 55%, 55%)`; }
+async function loadMaps() {
+  if (mapsFor === project && rom) return;
+  mapsFor = project;
+  const [r, m] = await Promise.all([get("/api/rommap"), get("/api/rammap")]);
+  rom = {...r, stateArr: unb64(r.state), exec: unb64(r.exec_heat), read: unb64(r.read_heat)};
+  rom.routineAt = new Int32Array(r.size).fill(-1);
+  r.routines.forEach((x, k) => { for (let a = x.entry; a <= x.last; a++) if (a - r.base >= 0 && a - r.base < r.size) rom.routineAt[a - r.base] = k; });
+  ram = {...m, stateArr: unb64(m.state), heatArr: unb64(m.heat)};
+  ram.labelAt = new Int32Array(m.size).fill(-1);
+  m.labels.forEach((l, k) => { for (let a = l.addr; a < l.addr + l.size && a < m.size; a++) ram.labelAt[a] = k; });
+  drawRom(); drawRam();
+  loadGraph();
+}
+function drawRom() {
+  const cols = 256, rows = rom.size / cols, cell = 3, cv = $("#romcanvas");
+  cv.width = cols * cell; cv.height = rows * cell;
+  const g = cv.getContext("2d");
+  for (let i = 0; i < rom.size; i++) {
+    let c;
+    if (romLayer === "state") c = ROM_COLORS[rom.stateArr[i]];
+    else if (romLayer === "exec") c = heatColor(rom.exec[i]);
+    else if (romLayer === "read") c = heatColor(rom.read[i], "blue");
+    else { const k = rom.routineAt[i], r = k < 0 ? null : rom.routines[k];
+      c = !r ? "#d9d6cc" : !r.annotated ? "#c9c6bc" : confColor(romLayer === "conf" ? r.confidence : r.evidence); }
+    g.fillStyle = c; g.fillRect((i % cols) * cell, Math.floor(i / cols) * cell, cell, cell);
+  }
+  g.fillStyle = "rgba(0,0,0,.25)";
+  for (let r = 16; r < rows; r += 16) g.fillRect(0, r * cell, cols * cell, 1);
+  $("#rompages").innerHTML = Array.from({length: rows / 16}, (_, k) =>
+    `<span style="height:${100 / (rows / 16)}%">${hex(rom.base + k * 0x1000)}</span>`).join("");
+  const total = rom.size, c = rom.counts, n = s => c[s] || 0;
+  $("#romintro").textContent = `${total / 1024} KB, 256 bytes per row. ${pct(n("annotated") + n("annotated, low confidence") + n("verified") + n("approved"), total)}% annotated, `
+    + `${pct(n("code that ran"), total)}% ran but not annotated yet, ${pct(n("unknown"), total)}% still unknown.`;
+  const blue = romLayer === "read" ? "blue" : "";
+  $("#romlegend").innerHTML = romLayer === "state"
+    ? rom.states.map((s, k) => `<span><i style="background:${ROM_COLORS[k]}"></i>${esc(s)} (${pct(n(s), total)}%)</span>`).join("")
+    : romLayer === "conf" || romLayer === "evidence" ? `<span>${romLayer === "conf" ? "effective confidence (the annotator's claim, discounted for placeholder names)" : "evidence: how much the tools checked (ran, traced, knocked out, verified RAM, probed)"}:</span><span><i style="background:${confColor(0.2)}"></i>low</span><span><i style="background:${confColor(0.5)}"></i>0.5</span><span><i style="background:${confColor(0.9)}"></i>high</span><span><i style="background:#c9c6bc"></i>not annotated</span>`
+    : `<span><i style="background:${heatColor(30, blue)}"></i>rarely</span><span><i style="background:${heatColor(140, blue)}"></i>often</span><span><i style="background:${heatColor(255, blue)}"></i>constantly (log scale)</span>`;
+}
+function romAt(e) {
+  const b = $("#romcanvas").getBoundingClientRect();
+  const x = Math.floor((e.clientX - b.left) / b.width * 256), y = Math.floor((e.clientY - b.top) / b.height * (rom.size / 256));
+  const i = y * 256 + x;
+  return i >= 0 && i < rom.size ? i : -1;
+}
+$("#romcanvas").addEventListener("mousemove", e => {
+  if (!rom) return;
+  const i = romAt(e); if (i < 0) return;
+  const addr = rom.base + i, k = rom.routineAt[i], r = k >= 0 ? rom.routines[k] : null;
+  const d = !r && rom.data.filter(x => x.addr <= addr).pop();
+  $("#romreadout").innerHTML = `${hex(addr)} · ${esc(rom.states[rom.stateArr[i]])}` + (r
+    ? ` · in <b>${esc(r.name)}</b> (${hex(r.entry)}–${hex(r.last)}, ${r.annotated ? r.status + (r.confidence != null ? " " + r.confidence.toFixed(2) : "") + (r.evidence != null ? ", evidence " + r.evidence.toFixed(2) : "") : "not annotated"})`
+    : d ? ` · after data label <b>${esc(d.name)}</b>` : "");
+});
+$("#romcanvas").addEventListener("click", e => {
+  if (!rom) return;
+  const i = romAt(e); if (i < 0) return;
+  const k = rom.routineAt[i];
+  if (k >= 0) location.hash = "code/" + encodeURIComponent(rom.routines[k].name);
+});
+document.querySelectorAll("#romlayers button").forEach(b => b.addEventListener("click", () => {
+  romLayer = b.dataset.layer;
+  document.querySelectorAll("#romlayers button").forEach(x => x.classList.toggle("on", x === b));
+  drawRom();
+}));
+function drawRam() {
+  const cols = 64, rows = ram.size / cols, cell = 12, cv = $("#ramcanvas");
+  cv.width = cols * cell; cv.height = rows * cell;
+  const g = cv.getContext("2d");
+  for (let i = 0; i < ram.size; i++) {
+    g.fillStyle = ramLayer === "state" ? RAM_COLORS[ram.stateArr[i]] : heatColor(ram.heatArr[i]);
+    g.fillRect((i % cols) * cell + 1, Math.floor(i / cols) * cell + 1, cell - 1, cell - 1);
+  }
+  g.strokeStyle = "rgba(29,29,27,.75)"; g.lineWidth = 1.5;
+  ram.labels.forEach(l => {          // outline each labeled block, row by row
+    for (let a = l.addr; a < l.addr + l.size; ) {
+      const row = Math.floor(a / cols), end = Math.min(l.addr + l.size, (row + 1) * cols);
+      g.strokeRect((a % cols) * cell + 0.5, row * cell + 0.5, (end - a) * cell, cell);
+      a = end;
+    }
+  });
+  g.fillStyle = "rgba(0,0,0,.35)";
+  for (let r = 4; r < rows; r += 4) g.fillRect(0, r * cell, cols * cell, 2);
+  $("#rampages").innerHTML = Array.from({length: rows / 4}, (_, k) =>
+    `<span style="height:${100 / (rows / 4)}%">${hex(k * 0x100)}</span>`).join("");
+  const c = ram.counts, n = s => c[s] || 0;
+  $("#ramlegend").innerHTML = ramLayer === "state"
+    ? ram.states.map((s, k) => `<span><i style="background:${RAM_COLORS[k]}"></i>${esc(s)} (${n(s)} bytes)</span>`).join("")
+      + `<span>· 4 rows = one 256-byte page: $0000 zero page, $0100 stack, $0200 sprites</span>`
+    : `<span><i style="background:${heatColor(30)}"></i>rarely read/written</span><span><i style="background:${heatColor(255)}"></i>constantly (log scale)</span>`;
+}
+$("#ramcanvas").addEventListener("mousemove", e => {
+  if (!ram) return;
+  const b = $("#ramcanvas").getBoundingClientRect();
+  const x = Math.floor((e.clientX - b.left) / b.width * 64), y = Math.floor((e.clientY - b.top) / b.height * 32);
+  const a = y * 64 + x; if (a < 0 || a >= ram.size) return;
+  const k = ram.labelAt[a], l = k >= 0 ? ram.labels[k] : null;
+  $("#ramreadout").innerHTML = `${hex(a)} · ${esc(ram.states[ram.stateArr[a]])}` + (l
+    ? ` · <b>${esc(l.name)}${a !== l.addr ? "+" + (a - l.addr) : ""}</b> (${l.status}${l.confidence != null ? " " + l.confidence.toFixed(2) : ""}${l.size > 1 ? ", " + l.size + " bytes" : ""})` : "")
+    + ` · reads ${(ram.reads[a] || 0).toLocaleString()}, writes ${(ram.writes[a] || 0).toLocaleString()}`;
+});
+document.querySelectorAll("#ramlayers button").forEach(b => b.addEventListener("click", () => {
+  ramLayer = b.dataset.layer;
+  document.querySelectorAll("#ramlayers button").forEach(x => x.classList.toggle("on", x === b));
+  drawRam();
+}));
+async function loadGraph() {
+  graphData = await get("/api/graph");
+  const big0 = graphData.clusters.filter(c => c.id !== -1).slice(0, 12).map(c => c.id);
+  $("#clusters").innerHTML = graphData.clusters.map(c => `
+    <div class="cl" data-cl="${c.id}"><div><i class="sw" style="background:${c.id === -1 ? "#9a978e" : big0.includes(c.id) ? GROUP_COLORS[big0.indexOf(c.id)] : "#c9c6bc"}"></i><b>${esc(c.name)}</b></div>
+      <div class="l"><span>${c.routines} routines · ${c.bytes.toLocaleString()} bytes</span><span>${pct(c.annotated, c.routines)}% annotated${c.verified ? " · " + c.verified + " verified" : ""}</span></div>
+      ${bar(c.annotated, c.routines)}</div>`).join("");
+  if (!window.d3) {
+    await new Promise((ok, fail) => { const s = document.createElement("script");
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"; s.onload = ok; s.onerror = fail; document.head.appendChild(s); })
+      .catch(() => { $("#graph").innerHTML = `<div class="legend">The graph needs d3 from cdnjs (offline?). The groups on the left still work.</div>`; });
+    if (!window.d3) return;
+  }
+  const W = $("#graph").clientWidth || 700, H = 560;
+  const nodes = graphData.nodes.map(n => ({...n})), links = graphData.edges.map(e => ({...e}));
+  const big = graphData.clusters.filter(c => c.id !== -1).slice(0, 12).map(c => c.id);
+  const colour = g => g === -1 ? "#9a978e" : big.includes(g) ? GROUP_COLORS[big.indexOf(g)] : "#c9c6bc";
+  const centre = {};
+  big.forEach((g, k) => { const a = 2 * Math.PI * k / big.length; centre[g] = [W / 2 + Math.cos(a) * W * 0.32, H / 2 + Math.sin(a) * H * 0.34]; });
+  const sim = d3.forceSimulation(nodes)
+    .force("link", d3.forceLink(links).id(d => d.id).distance(18)
+      .strength(l => l.source.group === l.target.group ? 0.3 : 0.01))
+    .force("charge", d3.forceManyBody().strength(-14))
+    .force("x", d3.forceX(d => (centre[d.group] || [W / 2])[0]).strength(d => centre[d.group] ? 0.25 : 0.03))
+    .force("y", d3.forceY(d => (centre[d.group] || [0, H / 2])[1]).strength(d => centre[d.group] ? 0.25 : 0.03))
+    .force("collide", d3.forceCollide(d => 2 + Math.sqrt(d.bytes) / 2.2))
+    .stop();
+  for (let k = 0; k < 320; k++) sim.tick();
+  nodes.forEach(n => { n.x = Math.max(6, Math.min(W - 6, n.x)); n.y = Math.max(6, Math.min(H - 6, n.y)); });
+  const svg = d3.select("#graph").html("").append("svg").attr("viewBox", `0 0 ${W} ${H}`);
+  svg.append("g").selectAll("line").data(links).join("line")
+    .attr("x1", d => d.source.x).attr("y1", d => d.source.y).attr("x2", d => d.target.x).attr("y2", d => d.target.y);
+  svg.append("g").selectAll("circle").data(nodes).join("circle")
+    .attr("cx", d => d.x).attr("cy", d => d.y).attr("r", d => 2 + Math.sqrt(d.bytes) / 2.4)
+    .attr("fill", d => d.annotated ? colour(d.group) : "var(--panel)")
+    .attr("stroke", d => colour(d.group)).attr("stroke-width", d => d.annotated ? 1 : 1.5)
+    .attr("data-group", d => d.group)
+    .on("click", (e, d) => { location.hash = "code/" + encodeURIComponent(d.name); })
+    .append("title").text(d => `${d.name} ($${d.id.toString(16).toUpperCase()}) · ${d.bytes} bytes · ${d.annotated ? d.status : "not annotated"}`);
+  const cl = graphData.clusters;
+  svg.append("g").selectAll("text").data(big).join("text")
+    .attr("x", g => centre[g][0]).attr("text-anchor", "middle")
+    .attr("y", g => Math.max(12, Math.min(...nodes.filter(n => n.group === g).map(n => n.y - 2 - Math.sqrt(n.bytes) / 2.4)) - 4))
+    .attr("font-size", 11).attr("font-weight", 600).attr("fill", g => colour(g))
+    .attr("stroke", "var(--code-bg)").attr("stroke-width", 3).attr("paint-order", "stroke").text(g => (cl.find(c => c.id === g) || {}).name);
+}
+$("#clusters").addEventListener("mouseover", e => {
+  const c = e.target.closest("[data-cl]"); if (!c) return;
+  document.querySelectorAll("#graph circle").forEach(n => n.classList.toggle("dim", n.dataset.group !== c.dataset.cl));
+});
+$("#clusters").addEventListener("mouseleave", () => document.querySelectorAll("#graph circle").forEach(n => n.classList.remove("dim")));
+
+// ---- projects ------------------------------------------------------------------------------
+// One project per knowledge base in work/; the picker and every request use `project`.
+let projects = [];
+function projectName(c) { return c.name.replace(/\.nes$/i, ""); }
+async function loadProjects() {
+  const d = await get("/api/projects");
+  projects = d.projects;
+  if (!project || !projects.some(c => c.id === project)) project = d.default;
+  $("#proj").innerHTML = projects.map(c => `<option value="${esc(c.id)}" ${c.id === project ? "selected" : ""}>${esc(projectName(c))}</option>`).join("");
+  const cur = projects.find(c => c.id === project);
+  if (cur) document.title = "renes · " + projectName(cur);
+  return d;
+}
+function switchProject(id) {
+  if (id === project) return;
+  project = id;
+  try { localStorage.setItem("renes.project", id); } catch (e) {}
+  const u = new URL(location.href); u.searchParams.set("p", id); history.replaceState(null, "", u);
+  asm = null; all = []; current = null; mapsFor = null; questionsFor = null;
+  $("#detail").innerHTML = `<div class="empty">Pick an item on the left.</div>`;
+  loadProjects();
+  setTab(tab === "projects" ? "overview" : location.hash.slice(1) || "overview");
+}
+function bar(part, whole, ok) {
+  return `<div class="bar"><span class="${ok ? "ok" : ""}" style="width:${pct(part, whole)}%"></span></div>`;
+}
+function quality(q) {
+  const parts = [];
+  if (q && q.audit && q.audit.supported_rate != null)
+    parts.push(`audit: <b>${Math.round(q.audit.supported_rate * 100)}%</b> supported by the code, ${Math.round(q.audit.consistent_rate * 100)}% consistent (${q.audit.items} checked)`);
+  if (q && q.grading && q.grading.same_rate != null)
+    parts.push(`vs reference: <b>${Math.round(q.grading.same_rate * 100)}%</b> same meaning (${q.grading.pairs} graded)`);
+  return parts.length ? parts.join(" · ") : "quality not measured yet (`renes audit`)";
+}
+function renderProjects(d) {
+  projects = d.projects;
+  $("#projects").innerHTML = `<div class="next"><div><div class="sub">Projects</div>
+      <b>${projects.length} ROM${projects.length === 1 ? "" : "s"}</b> in <code>work/</code>. Start another with
+      <code>python -m renes init "roms/&lt;file&gt;.nes"</code>; it appears here on its own.</div></div>
+    <div class="projects">${projects.map(c => `
+      <div class="card proj ${c.id === project ? "sel" : ""}" data-proj="${esc(c.id)}">
+        <h3>${esc(projectName(c))}</h3>
+        <div class="legend">mapper ${c.mapper} · PRG ${c.prg / 1024} KB · ${c.rounds} loop rounds · ${c.last_activity ? "active " + ago(c.last_activity) : "no activity yet"}</div>
+        <div class="legend">${quality(c.quality)}</div>
+        <div class="legend">${c.owner ? `loop claimed by <b>${esc(c.owner.agent)}</b> · seen ${c.owner.age_minutes} min ago${c.owner.fresh ? "" : " (stale)"}` : "no agent has claimed this project's loop"}</div>
+        <div class="rows">
+          <div class="row"><div class="l"><span>Code proven by execution</span><span>${pct(c.executed, c.prg)}%</span></div>${bar(c.executed, c.prg)}</div>
+          <div class="row"><div class="l"><span>Routines annotated</span><span>${c.annotated} / ${c.routines}</span></div>${bar(c.annotated, c.routines)}</div>
+          <div class="row"><div class="l"><span>RAM labels verified</span><span>${c.ram_verified}</span></div></div>
+        </div>
+        <div class="legend" style="margin-top:10px">Next: <b>${esc(c.next)}</b> · ${esc(c.reason)}</div>
+      </div>`).join("")}</div>`;
+}
+$("#proj").addEventListener("change", e => switchProject(e.target.value));
+$("#projects").addEventListener("click", e => {
+  const c = e.target.closest("[data-proj]");
+  if (c) { switchProject(c.dataset.proj); location.hash = "overview"; }
+});
+
+loadProjects().then(() => setTab(location.hash.slice(1) || "overview"));
+</script>
+</body>
+</html>

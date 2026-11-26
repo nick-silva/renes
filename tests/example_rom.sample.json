@@ -1,0 +1,27 @@
+{
+  "_about": "Copy to tests/example_rom.json (git-ignored) and describe a ROM you own. The integration tests read it; without it they are skipped. Addresses are hex strings. Leave a fact out and only the tests that need it are skipped. The values below are placeholders, not facts about any game.",
+
+  "rom": "roms/example.nes",
+  "_rom": "An NROM (mapper 0) ROM, relative to the project root or absolute.",
+
+  "setup": [[60, "none"], [4, "start"], [240, "none"]],
+  "_setup": "Inputs from power-on into play, as [frames, buttons]. After it, holding Right must change RAM.",
+
+  "frame_counter": "$0000",
+  "_frame_counter": "A RAM byte the game adds 1 to on every frame during play, written by one INC instruction.",
+
+  "spare_byte": "$0000",
+  "_spare_byte": "A RAM byte that can be set to 0 during play without changing the picture or the sound.",
+
+  "player_x": "$0000",
+  "player_x_page": "$0000",
+  "_player_x": "Low and high byte of the player's horizontal position (progress for the exploration agent).",
+
+  "boot_routine": "$0000",
+  "_boot_routine": "Entry of a subroutine that static analysis reaches from reset and that runs in the first 30 frames.",
+
+  "jump_engine": "$0000",
+  "jump_table": "$0000",
+  "jump_table_entries": 0,
+  "_jump_engine": "Entry of the game's jump engine (a routine that pulls its return address and jumps through the table that follows the JSR), the address of one table that follows a call to it, and that table's entry count."
+}
